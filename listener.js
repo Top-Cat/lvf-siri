@@ -6,18 +6,19 @@ const app = express()
 
 app.use(xmlparser());
 
-module.exports = function(sqlPool, cb, cb2) {
-	var workQueue = async.queue(async function(task, callback) {
+var stopFunc = async function() {};
+var vehicleFunc = async function() {};
+
+module.exports = function(sqlPool) {
+	var workQueue = async.queue(async function(task) {
+		var func = (task.type == "vehicle") ? vehicleFunc : (
+			(task.type == "stop") ? stopFunc : (
+			async function() { }));
+
 		var connection = await pool.getConnection();
 
-		var func = (task.type == "vehicle") ? cb : (
-			(task.type == "stop") ? cb2 : (
-			function(a, b, c) { c(); }));
-
-		func(task.obj, connection, function() {
-			connection.release();
-			callback();
-		});
+		await func(task.obj, connection);
+		connection.release();
 	});
 
 	app.post('/', function(req, res) {
@@ -44,6 +45,7 @@ module.exports = function(sqlPool, cb, cb2) {
 					.stopmonitoringdelivery[0]
 					.monitoredstopvisit
 
+
 				activity.forEach(function(v) {
 					workQueue.push({type: "stop", obj: v});
 				});
@@ -55,4 +57,19 @@ module.exports = function(sqlPool, cb, cb2) {
 		}
 	})
 	app.listen(3000, () => console.log('Ensign adapter listening on port 3000'))
+
+	var listenerConfigurator;
+
+	listenerConfigurator = {
+		stop: function(f) {
+			stopFunc = f;
+			return listenerConfigurator;
+		},
+		vehicle: function(f) {
+			vehicleFunc = f;
+			return listenerConfigurator;
+		}
+	};
+
+	return listenerConfigurator;
 }
