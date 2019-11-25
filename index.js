@@ -14,6 +14,8 @@ var siriFeed = listener(mysql.createPool({
 	database: 'brian_buspics'
 }));
 
+var stopListing = new Set();
+
 /////////////////////////////////////////////////////////////////////////////////////////
 
 siriFeed.stop(async (stop, sqlConn) => {
@@ -22,11 +24,13 @@ siriFeed.stop(async (stop, sqlConn) => {
 		[1]
 	);*/
 
-	console.log(JSON.stringify(stop) + "\n");
+	console.log(JSON.stringify(stop));
 });
 
 siriFeed.vehicle(async (veh, sqlConn) => {
-	console.log(JSON.stringify(veh) + "\n");
+	if (veh.monitoredvehiclejourney[0].monitoredcall) {
+		stopListing.add(veh.monitoredvehiclejourney[0].monitoredcall[0].stoppointref[0]);
+	}
 });
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -40,8 +44,8 @@ function updateSubscription() {
 		process.env.CONSUMER_URI,
 		'LVF',
 		SubscriptionContext(),
-		VehicleMonitoringSubscriptionRequest(subscriptionLength + 1)
-//		StopMonitoringSubscriptionRequest(subscriptionLength + 1, ['1590060108', '1590005001', '1590026801'])
+		VehicleMonitoringSubscriptionRequest(subscriptionLength + 1),
+		StopMonitoringSubscriptionRequest(subscriptionLength + 1, Array.from(stopListing))
 	);
 
 	siri.makeRequest(req);
