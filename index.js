@@ -25,9 +25,13 @@ siriFeed.stop(async (stop, sqlConn) => {
 	console.log(JSON.stringify(stop) + "\n");
 });
 
+siriFeed.vehicle(async (veh, sqlConn) => {
+	console.log(JSON.stringify(veh) + "\n");
+});
+
 /////////////////////////////////////////////////////////////////////////////////////////
 
-var subscriptionLength = 10
+var subscriptionLength = 10;
 
 function updateSubscription() {
 	console.log("Updating subscription");
@@ -36,7 +40,8 @@ function updateSubscription() {
 		process.env.CONSUMER_URI,
 		'LVF',
 		SubscriptionContext(),
-		StopMonitoringSubscriptionRequest(subscriptionLength + 1, ['1590060108', '1590005001', '1590026801'])
+		VehicleMonitoringSubscriptionRequest(subscriptionLength + 1)
+//		StopMonitoringSubscriptionRequest(subscriptionLength + 1, ['1590060108', '1590005001', '1590026801'])
 	);
 
 	siri.makeRequest(req);

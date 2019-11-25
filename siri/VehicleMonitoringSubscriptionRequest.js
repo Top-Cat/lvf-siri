@@ -1,14 +1,15 @@
 var moment = require('moment');
+var uuidv1 = require('uuid/v1');
 
-module.exports = function(subId = '00000001', subLength = 5) {
+module.exports = function(subLength = 5) {
 	return {
 		'VehicleMonitoringSubscriptionRequest': {
-			'SubscriptionIdentifier': subId,
+			'SubscriptionIdentifier': uuidv1(),
 			'InitialTerminationTime': moment().add(subLength, 'm').format(),
 			'VehicleMonitoringRequest': {
 				'@version': '1.3',
 				'RequestTimestamp': moment().format(),
-//				'OperatorRef': 'EnsignBus',
+				'OperatorRef': 'MET',
 				'VehicleMonitoringDetailLevel': 'normal'
 			},
 			'IncrementalUpdates': 'true',
