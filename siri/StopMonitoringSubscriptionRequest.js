@@ -1,5 +1,5 @@
 var moment = require('moment');
-var uuidv1 = require('uuid/v1');
+var uuidv4 = require('uuid/v4');
 
 module.exports = function(subLength = 5, stopId = '1590005001') {
 	if (!Array.isArray(stopId)) {
@@ -14,7 +14,7 @@ module.exports = function(subLength = 5, stopId = '1590005001') {
 function generateSubReq(subLength, stopId) {
 	return {
 		'SubscriberRef': 'LVF',
-		'SubscriptionIdentifier': uuidv1(),
+		'SubscriptionIdentifier': uuidv4(),
 		'InitialTerminationTime': moment().add(subLength, 'm').format(),
 		'StopMonitoringRequest': {
 			'@version': '1.3',

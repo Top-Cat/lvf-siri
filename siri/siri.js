@@ -13,7 +13,7 @@ function makeRequest(req) {
 		'Siri': mReq
 	});
 
-//	return console.log(feed.end({pretty: true}));
+//	console.log(feed.end({pretty: true}));
 	request.post({
 		'uri': process.env.SIRI_URI,
 		'body': feed.end(),
@@ -21,7 +21,7 @@ function makeRequest(req) {
 			'user': process.env.SIRI_USER,
 			'pass': process.env.SIRI_PASS
 		}
-	});//, function(err,httpResponse,body) { console.log(body) });
+	}, function(err,httpResponse,body) { console.log(body); });
 }
 
 

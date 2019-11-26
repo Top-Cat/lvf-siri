@@ -17,8 +17,14 @@ module.exports = function(sqlPool) {
 
 		var connection = await sqlPool.getConnection();
 
-		await func(task.obj, connection);
-		connection.release();
+		try {
+			await func(task.obj, connection);
+		} catch (e) {
+			console.log(JSON.stringify(task.obj));
+			console.log(e);
+		} finally {
+			connection.release();
+		}
 	});
 
 	app.post('/', function(req, res) {
@@ -41,12 +47,23 @@ module.exports = function(sqlPool) {
 				});
 			} else if (serviceDelivery.stopmonitoringdelivery) {
 				console.log("-- Stop update --");
-				var activity = serviceDelivery
-					.stopmonitoringdelivery[0]
-					.monitoredstopvisit;
 
-				activity.forEach(function(v) {
-					workQueue.push({type: "stop", obj: v});
+				var delivery = serviceDelivery.stopmonitoringdelivery;
+				delivery.forEach(function(d) {
+					var activity = d.monitoredstopvisit || [];
+					var cancellation = d.monitoredstopvisitcancellation || [];
+
+					if (activity.length == 0) {
+						if (cancellation.length > 0) {
+							console.log("CANCEL " + cancellation.length);
+						} else {
+							console.log(JSON.stringify(reqBody));
+						}
+					}
+
+					activity.forEach(function(v) {
+						workQueue.push({type: "stop", obj: v});
+					});
 				});
 			} else {
 				console.log("-- Unknown service delivery --");
