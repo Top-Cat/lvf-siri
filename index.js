@@ -36,7 +36,7 @@ siriFeed.stop(async (stop, sqlConn) => {
 		destination: stopUpdate.destinationname[0],
 		operator: stopUpdate.operatorref[0],
 		visit: parseInt(monitor.visitnumber[0]),
-		prediction: moment((monitor.expectedarrivaltime || monitor.actualarrivaltime)[0])
+		prediction: moment((monitor.expectedarrivaltime || monitor.actualarrivaltime || monitor.expecteddeparturetime)[0])
 				.format("YYYY-MM-DD HH:mm:ss")
 	};
 
@@ -47,10 +47,10 @@ siriFeed.stop(async (stop, sqlConn) => {
 	//console.log(JSON.stringify(info));
 
 	await sqlConn.execute(
-		'INSERT INTO lvf_siri_predictions (vehicle_id, stop_id, route, dirid, destination, operator, visit, `when`) ' +
+		'INSERT INTO lvf_siri_predictions (vehicle_id, stop_id, route, dirid, destination, operator, visit, `stop_arrival`) ' +
 		'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE ' +
 		'route = VALUES(route), dirid = VALUES(dirid), destination = VALUES(destination), ' +
-		'operator = VALUES(operator), visit = VALUES(visit), `when` = VALUES(`when`);',
+		'operator = VALUES(operator), visit = VALUES(visit), `stop_arrival` = VALUES(`stop_arrival`);',
 		[info.vid, info.stop, info.line, info.direction, info.destination, info.operator, info.visit, info.prediction]
 	);
 });
@@ -89,5 +89,8 @@ function updateSubscription() {
 	}
 }
 
-setInterval(updateSubscription, subscriptionLength * 60 * 1000);
-updateSubscription();
+siriFeed.getStops().then(stops => {
+	stops.forEach(stop => stopListing.add(stop));
+	setInterval(updateSubscription, subscriptionLength * 60 * 1000);
+	updateSubscription();
+});

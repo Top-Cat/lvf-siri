@@ -84,6 +84,10 @@ module.exports = function(sqlPool) {
 		vehicle: function(f) {
 			vehicleFunc = f;
 			return listenerConfigurator;
+		},
+		getStops: async function() {
+			const [results] = await sqlPool.query('SELECT stop_id FROM lvf_siri_predictions GROUP BY stop_id;');
+			return results.map(x => x.stop_id);
 		}
 	};
 

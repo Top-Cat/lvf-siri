@@ -1,10 +1,10 @@
 var moment = require('moment');
-var uuidv1 = require('uuid/v1');
+var uuidv4 = require('uuid/v4');
 
 module.exports = function(subLength = 5) {
 	return {
-		'VehicleMonitoringSubscriptionRequest': {
-			'SubscriptionIdentifier': uuidv1(),
+		'VehicleMonitoringSubscriptionRequest': [{
+			'SubscriptionIdentifier': uuidv4(),
 			'InitialTerminationTime': moment().add(subLength, 'm').format(),
 			'VehicleMonitoringRequest': {
 				'@version': '1.3',
@@ -14,7 +14,18 @@ module.exports = function(subLength = 5) {
 			},
 			'IncrementalUpdates': 'true',
 			'UpdateInterval': 'PT10S',
-		}
+		}, {
+			'SubscriptionIdentifier': uuidv4(),
+			'InitialTerminationTime': moment().add(subLength, 'm').format(),
+			'VehicleMonitoringRequest': {
+				'@version': '1.3',
+				'RequestTimestamp': moment().format(),
+				'OperatorRef': 'EnsignBus',
+				'VehicleMonitoringDetailLevel': 'normal'
+			},
+			'IncrementalUpdates': 'true',
+			'UpdateInterval': 'PT10S',
+		}]
 	};
 };
 
