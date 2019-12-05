@@ -31,7 +31,7 @@ siriFeed.stop(async (stop, sqlConn) => {
 		destination: stopUpdate.destinationname[0],
 		operator: stopUpdate.operatorref[0],
 		visit: parseInt(monitor.visitnumber[0]),
-		prediction: moment((monitor.expectedarrivaltime || monitor.actualarrivaltime || monitor.expecteddeparturetime)[0])
+		prediction: moment((monitor.expectedarrivaltime || monitor.actualarrivaltime || monitor.aimedarrivaltime || monitor.expecteddeparturetime || monitor.aimeddeparturetime)[0])
 				.format("YYYY-MM-DD HH:mm:ss")
 	};
 
