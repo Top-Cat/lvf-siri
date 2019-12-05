@@ -23,13 +23,8 @@ siriFeed.stop(async (stop, sqlConn) => {
 	const stopUpdate = stop.monitoredvehiclejourney[0];
 	const monitor = stopUpdate.monitoredcall[0];
 
-	if (!stopUpdate.vehicleref) {
-		console.log("NOREF");// + JSON.stringify(stop));
-		return;
-	}
-
 	const info = {
-		vid: stopUpdate.vehicleref[0],
+		vid: (stopUpdate.vehicleref || [0])[0],
 		stop: stop.monitoringref[0],
 		line: stopUpdate.lineref[0],
 		direction: stopUpdate.directionref[0] == "Outbound" ? 1 : 2,
