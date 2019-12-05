@@ -86,8 +86,8 @@ module.exports = function(sqlPool) {
 			return listenerConfigurator;
 		},
 		getStops: async function() {
-			const [results] = await sqlPool.query('SELECT stop_id FROM lvf_siri_predictions GROUP BY stop_id;');
-			return results.map(x => x.stop_id);
+			const [results] = await sqlPool.query('SELECT StopId FROM lvf_stops WHERE mode IN (\'MET\', \'ENS\');');
+			return results.map(x => x.StopId);
 		}
 	};
 
