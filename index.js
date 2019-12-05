@@ -50,7 +50,7 @@ siriFeed.stop(async (stop, sqlConn) => {
 		'INSERT INTO lvf_siri_predictions (vehicle_id, stop_id, route, dirid, destination, operator, visit, `stop_arrival`) ' +
 		'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE ' +
 		'route = VALUES(route), dirid = VALUES(dirid), destination = VALUES(destination), ' +
-		'operator = VALUES(operator), visit = VALUES(visit), `stop_arrival` = VALUES(`stop_arrival`);',
+		'operator = COALESCE(NULLIF(operator, ""), VALUES(operator)), visit = VALUES(visit), `stop_arrival` = VALUES(`stop_arrival`);',
 		[info.vid, info.stop, info.line, info.direction, info.destination, info.operator, info.visit, info.prediction]
 	);
 });
@@ -65,6 +65,14 @@ siriFeed.vehicle(async (veh, sqlConn) => {
 
 var subscriptionLength = 10;
 
+function chunk(arr, size) {
+	var myArray = [];
+	for (var i = 0; i < arr.length; i += size) {
+		myArray.push(arr.slice(i, i+size));
+	}
+	return myArray;
+}
+
 function updateSubscription() {
 	console.log("Updating subscription");
 
@@ -78,14 +86,17 @@ function updateSubscription() {
 	siri.makeRequest(req);
 
 	if (stopListing.size > 0) {
-		var stopReq = SubscriptionRequest(
-			process.env.CONSUMER_URI,
-			'LVF',
-			SubscriptionContext(),
-			StopMonitoringSubscriptionRequest(subscriptionLength + 1, Array.from(stopListing))
-		);
+		const chunks = chunk(Array.from(stopListing), 500);
+		chunks.forEach(chunk => {
+			var stopReq = SubscriptionRequest(
+				process.env.CONSUMER_URI,
+				'LVF',
+				SubscriptionContext(),
+				StopMonitoringSubscriptionRequest(subscriptionLength + 1, chunk)
+			);
 
-		siri.makeRequest(stopReq);
+			siri.makeRequest(stopReq);
+		});
 	}
 }
 
