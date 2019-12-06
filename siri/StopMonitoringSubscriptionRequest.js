@@ -27,6 +27,6 @@ function generateSubReq(subLength, stopId) {
 			'StopMonitoringDetailLevel': 'normal',
 		},
 		'IncrementalUpdates': 'true',
-		'ChangeBeforeUpdates': 'PT30S'
+		'ChangeBeforeUpdates': 'PT10S'
 	};
 }

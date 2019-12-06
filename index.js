@@ -1,3 +1,4 @@
+var statsd = require('hot-shots');
 var mysql = require('mysql2/promise');
 var moment = require('moment');
 var listener = require('./listener');
@@ -8,12 +9,26 @@ var SubscriptionContext = require('./siri/SubscriptionContext');
 var VehicleMonitoringSubscriptionRequest = require('./siri/VehicleMonitoringSubscriptionRequest');
 var StopMonitoringSubscriptionRequest = require('./siri/StopMonitoringSubscriptionRequest');
 
-var siriFeed = listener(mysql.createPool({
-	host: 'lvf-db-service',
-	user: process.env.MYSQL_USER,
-	password: process.env.MYSQL_PASS,
-	database: 'brian_buspics'
-}));
+var statsClient = new statsd({
+	host: "telegraf.monitoring",
+	port: 8125,
+	globalTags: {
+		app: "lvf-siri"
+	},
+	prefix: "lvf.siri.",
+	maxBufferSize: 5000,
+	cacheDns: true
+});
+
+var siriFeed = listener(
+	mysql.createPool({
+		host: 'lvf-db-service',
+		user: process.env.MYSQL_USER,
+		password: process.env.MYSQL_PASS,
+		database: 'brian_buspics'
+	}),
+	statsClient
+);
 
 var stopListing = new Set();
 
@@ -70,6 +85,7 @@ function chunk(arr, size) {
 
 function updateSubscription() {
 	console.log("Updating subscription");
+	statsClient.increment('update_sub');
 
 	var req = SubscriptionRequest(
 		process.env.CONSUMER_URI,

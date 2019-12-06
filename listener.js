@@ -1,3 +1,4 @@
+var _ = require('lodash');
 var async = require('async');
 var express = require('express');
 var xmlparser = require('express-xml-bodyparser');
@@ -9,7 +10,7 @@ app.use(xmlparser());
 var stopFunc = async function() {};
 var vehicleFunc = async function() {};
 
-module.exports = function(sqlPool) {
+module.exports = function(sqlPool, statsClient) {
 	var workQueue = async.queue(async function(task) {
 		var func = (task.type == "vehicle") ? vehicleFunc : (
 			(task.type == "stop") ? stopFunc : (
@@ -32,21 +33,25 @@ module.exports = function(sqlPool) {
 
 		var reqBody = req.body.siri;
 		if (reqBody.heartbeatnotification) {
-			console.log("-- Heartbeat --");
+			//console.log("-- Heartbeat --");
+			statsClient.increment('message', 1, {type: 'heartbeat'});
 		} else if (reqBody.servicedelivery) {
 			var serviceDelivery = reqBody
 				.servicedelivery[0];
 			if (serviceDelivery.vehiclemonitoringdelivery) {
-				console.log("-- Vehicle update --");
+				//console.log("-- Vehicle update --");
 				var activity = serviceDelivery
 					.vehiclemonitoringdelivery[0]
 					.vehicleactivity;
 
+				statsClient.increment('message', 1, {type: 'vehicle'});
+				statsClient.increment('update', activity.length, {type: 'vehicle'});
 				activity.forEach(function(v) {
 					workQueue.push({type: "vehicle", obj: v});
 				});
 			} else if (serviceDelivery.stopmonitoringdelivery) {
-				console.log("-- Stop update --");
+				//console.log("-- Stop update --");
+				statsClient.increment('message', 1, {type: 'stop'});
 
 				var delivery = serviceDelivery.stopmonitoringdelivery;
 				delivery.forEach(function(d) {
@@ -55,20 +60,26 @@ module.exports = function(sqlPool) {
 
 					if (activity.length == 0) {
 						if (cancellation.length > 0) {
-							console.log("CANCEL " + cancellation.length);
+							statsClient.increment('update', cancellation.length, {type: 'cancel'});
+							//console.log("CANCEL " + cancellation.length);
 						} else {
 							console.log(JSON.stringify(reqBody));
 						}
 					}
 
-					activity.forEach(function(v) {
-						workQueue.push({type: "stop", obj: v});
+					_(activity).groupBy(it => it.monitoredvehiclejourney[0].operatorref[0]).each((opActivity, op) => {
+						statsClient.increment('update', opActivity.length, {operator: op, type: 'predicition'});
+						opActivity.forEach(function(v) {
+							workQueue.push({type: "stop", obj: v});
+						});
 					});
 				});
 			} else {
+				statsClient.increment('message', 1, {type: 'unknown', level: 'service'});
 				console.log("-- Unknown service delivery --");
 			}
 		} else {
+			statsClient.increment('message', 1, {type: 'unknown', level: 'message'});
 			console.log("-- Unknown message --");
 		}
 	})
