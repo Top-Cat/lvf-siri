@@ -42,10 +42,11 @@ siriFeed.stop(async (stop, sqlConn) => {
 		vid: (stopUpdate.vehicleref || [0])[0],
 		stop: stop.monitoringref[0],
 		line: stopUpdate.lineref[0],
-		direction: stopUpdate.directionref[0] == "Outbound" ? 1 : 2,
+		direction: stopUpdate.directionref[0].toLowerCase() == "outbound" ? 1 : 2,
 		destination: stopUpdate.destinationname[0],
 		operator: stopUpdate.operatorref[0],
 		visit: parseInt(monitor.visitnumber[0]),
+		id: stop.itemidentifier[0],
 		prediction: moment((monitor.expectedarrivaltime || monitor.actualarrivaltime || monitor.aimedarrivaltime || monitor.expecteddeparturetime || monitor.aimeddeparturetime)[0])
 				.format("YYYY-MM-DD HH:mm:ss")
 	};
@@ -55,19 +56,35 @@ siriFeed.stop(async (stop, sqlConn) => {
 	}
 
 	//console.log(JSON.stringify(info));
-
-	await sqlConn.execute(
-		'INSERT INTO lvf_siri_predictions (vehicle_id, stop_id, route, dirid, destination, operator, visit, `stop_arrival`) ' +
-		'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE ' +
-		'route = VALUES(route), dirid = VALUES(dirid), destination = VALUES(destination), ' +
-		'operator = COALESCE(NULLIF(operator, ""), VALUES(operator)), visit = VALUES(visit), `stop_arrival` = VALUES(`stop_arrival`);',
-		[info.vid, info.stop, info.line, info.direction, info.destination, info.operator, info.visit, info.prediction]
-	);
+	await updatePrediction(sqlConn, info);
 });
+
+async function updatePrediction(sqlConn, info) {
+	await sqlConn.execute(
+		'INSERT INTO lvf_siri_predictions (id, vehicle_id, stop_id, route, dirid, destination, operator, visit, `stop_arrival`) ' +
+		'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE ' +
+		'route = VALUES(route), vehicle_id = COALESCE(NULLIF(VALUES(vehicle_id), "0"), vehicle_id), stop_id = VALUES(stop_id), dirid = VALUES(dirid), destination = VALUES(destination), ' +
+		'operator = COALESCE(NULLIF(operator, ""), VALUES(operator)), visit = VALUES(visit), `stop_arrival` = VALUES(`stop_arrival`);',
+		[info.id, info.vid, info.stop, info.line, info.direction, info.destination, info.operator, info.visit, info.prediction]
+	);
+}
 
 siriFeed.vehicle(async (veh, sqlConn) => {
 	if (veh.monitoredvehiclejourney[0].monitoredcall) {
-		stopListing.add(veh.monitoredvehiclejourney[0].monitoredcall[0].stoppointref[0]);
+		const journey = veh.monitoredvehiclejourney[0];
+		const call = journey.monitoredcall[0];
+		stopListing.add(call.stoppointref[0]);
+
+		if (call.visitnumber && journey.vehicleref && call.visitnumber[0] == 1) {
+			const direction = journey.directionref[0].toLowerCase() == "outbound" ? 1 : 2;
+			const journeyCode = veh.extensions[0].vehiclejourney[0].operational[0].ticketmachine[0].journeycode[0];
+
+			await sqlConn.execute(
+				'UPDATE lvf_siri_predictions SET vehicle_id = ? ' +
+				'WHERE id LIKE ? AND route = ? AND dirid = ? AND operator = ? AND vehicle_id = ?',
+				[journey.vehicleref[0], '%' + journeyCode, journey.lineref[0], direction, journey.operatorref[0], "0"]
+			);
+		}
 	}
 });
 
