@@ -38,6 +38,9 @@ siriFeed.stop(async (stop, sqlConn) => {
 	const stopUpdate = stop.monitoredvehiclejourney[0];
 	const monitor = stopUpdate.monitoredcall[0];
 
+	const [id, year, month, day, routeVisit, journey] = stop.itemidentifier[0].match(/([0-9]{4})([0-9]{2})([0-9]{2})([0-9]+)([0-9]{4})/);
+	const route = parseInt(routeVisit.slice(0, -(parseInt(monitor.visitnumber[0])+"").length));
+
 	const info = {
 		vid: (stopUpdate.vehicleref || [0])[0],
 		stop: stop.monitoringref[0],
@@ -46,13 +49,15 @@ siriFeed.stop(async (stop, sqlConn) => {
 		destination: stopUpdate.destinationname[0],
 		operator: stopUpdate.operatorref[0],
 		visit: parseInt(monitor.visitnumber[0]),
-		id: stop.itemidentifier[0],
+		id: id,
 		prediction: moment((monitor.expectedarrivaltime || monitor.actualarrivaltime || monitor.aimedarrivaltime || monitor.expecteddeparturetime || monitor.aimeddeparturetime)[0])
 				.format("YYYY-MM-DD HH:mm:ss")
 	};
 
 	if (info.operator.length == 0) {
 		console.log(JSON.stringify(stop));
+	} else {
+		await sqlConn.execute('INSERT IGNORE INTO lvf_siri_routes (id, route, dirid, operator) VALUES (?, ?, ?, ?);', [route, info.line, info.direction, info.operator]);
 	}
 
 	//console.log(JSON.stringify(info));
@@ -104,6 +109,10 @@ function updateSubscription() {
 	console.log("Updating subscription");
 	statsClient.increment('update_sub');
 
+	siriFeed.getConn(async sqlConn => {
+		await sqlConn.execute("DELETE FROM lvf_siri_predictions WHERE stop_arrival < NOW() - INTERVAL 1 DAY;");
+	});
+
 	var req = SubscriptionRequest(
 		process.env.CONSUMER_URI,
 		'LVF',
@@ -128,8 +137,17 @@ function updateSubscription() {
 	}
 }
 
+function doStats() {
+	siriFeed.getConn(async sqlConn => {
+		const [results] = await sqlConn.query("SELECT COUNT(*) activePredictions FROM lvf_siri_predictions WHERE stop_arrival > NOW();");
+		statsClient.gauge('active_predicitions', results[0].activePredictions);
+	});
+}
+
 siriFeed.getStops().then(stops => {
 	stops.forEach(stop => stopListing.add(stop));
 	setInterval(updateSubscription, subscriptionLength * 60 * 1000);
 	updateSubscription();
 });
+
+setInterval(doStats, 10 * 1000);

@@ -99,6 +99,17 @@ module.exports = function(sqlPool, statsClient) {
 		getStops: async function() {
 			const [results] = await sqlPool.query('SELECT StopId FROM lvf_stops WHERE mode IN (\'MET\', \'ENS\');');
 			return results.map(x => x.StopId);
+		},
+		getConn: async function(cb) {
+			var connection = await sqlPool.getConnection();
+
+			try {
+				await cb(connection);
+			} catch (e) {
+				console.log(e);
+			} finally {
+				connection.release();
+			}
 		}
 	};
 
