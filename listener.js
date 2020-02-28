@@ -61,7 +61,7 @@ module.exports = function(sqlPool, statsClient) {
 					if (activity.length == 0) {
 						if (cancellation.length > 0) {
 							statsClient.increment('update', cancellation.length, {type: 'cancel'});
-							//console.log("CANCEL " + cancellation.length);
+							console.log("CANCEL " + JSON.stringify(cancellation));
 						} else {
 							console.log(JSON.stringify(reqBody));
 						}

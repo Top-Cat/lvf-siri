@@ -21,7 +21,7 @@ function makeRequest(req) {
 			'user': process.env.SIRI_USER,
 			'pass': process.env.SIRI_PASS
 		}
-	}, function(err,httpResponse,body) { console.log(body); });
+	}, function(err,httpResponse,body) { /*console.log(body);*/ });
 }
 
 
